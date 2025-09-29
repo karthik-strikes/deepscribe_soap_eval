@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional, Set
 from abc import ABC, abstractmethod
 from enum import Enum
 from tqdm.asyncio import tqdm
+from utils.json_parser import safe_json_parse
 
 
 class EvaluatorType(Enum):
@@ -123,9 +124,6 @@ class ExtractCriticalFindings(dspy.Signature):
     critical_findings: str = dspy.OutputField(
         desc="JSON list of critical medical facts that must be captured in any clinical note"
     )
-    reasoning: str = dspy.OutputField(
-        desc="Step by step reasoning for why each finding is critical, considering patient context"
-    )
 
 
 class ValidateContentFidelity(dspy.Signature):
@@ -146,9 +144,6 @@ class ValidateContentFidelity(dspy.Signature):
     unsupported_content: str = dspy.OutputField(
         desc="JSON object with 'list' and 'count' of medical content in note not supported by transcript or patient context"
     )
-    reasoning: str = dspy.OutputField(
-        desc="Detailed reasoning for each classification decision, considering patient context"
-    )
 
 
 # =============================================================================
@@ -158,14 +153,9 @@ class ValidateContentFidelity(dspy.Signature):
 class ExtractMedicalStatements(dspy.Signature):
     """Extract all medical statements from generated note"""
     generated_note: str = dspy.InputField(desc="Generated medical note")
-    patient_metadata: str = dspy.InputField(
-        desc="Patient demographics and background information")
 
     medical_statements: str = dspy.OutputField(
         desc="JSON list of all medical statements, claims, and conclusions in the note"
-    )
-    reasoning: str = dspy.OutputField(
-        desc="Reasoning for what constitutes a medical statement, considering patient context"
     )
 
 
@@ -182,9 +172,6 @@ class ValidateMedicalAccuracy(dspy.Signature):
     )
     medically_incorrect: str = dspy.OutputField(
         desc="JSON object with 'list' and 'count' of medically incorrect, inappropriate or misleading statements"
-    )
-    reasoning: str = dspy.OutputField(
-        desc="Medical reasoning for accuracy assessment of each statement, considering patient context"
     )
 
 
@@ -227,11 +214,11 @@ class ContentFidelityEvaluator(dspy.Module):
             )
 
             # Parse JSON results
-            correctly_captured_data = self._safe_json_parse(
+            correctly_captured_data = safe_json_parse(
                 validation_result.correctly_captured)
-            missed_critical_data = self._safe_json_parse(
+            missed_critical_data = safe_json_parse(
                 validation_result.missed_critical)
-            unsupported_content_data = self._safe_json_parse(
+            unsupported_content_data = safe_json_parse(
                 validation_result.unsupported_content)
 
             return {
@@ -256,9 +243,7 @@ class ContentFidelityEvaluator(dspy.Module):
                 'content_fidelity_detail': {
                     'correctly_captured_list': correctly_captured_data.get('list', []),
                     'missed_critical_list': missed_critical_data.get('list', []),
-                    'unsupported_content_list': unsupported_content_data.get('list', []),
-                    'reasoning': validation_result.reasoning,
-                    'ground_truth_reasoning': extraction_result.reasoning
+                    'unsupported_content_list': unsupported_content_data.get('list', [])
                 }
             }
 
@@ -278,13 +263,6 @@ class ContentFidelityEvaluator(dspy.Module):
     def evaluate(self, transcript: str, generated_note: str) -> Dict[str, Any]:
         """Interface method for BaseEvaluator compatibility"""
         return self(transcript=transcript, generated_note=generated_note)
-
-    def _safe_json_parse(self, json_str: str) -> Dict[str, Any]:
-        """Safely parse JSON string with fallback"""
-        try:
-            return json.loads(json_str)
-        except (json.JSONDecodeError, TypeError):
-            return {'list': [], 'count': 0}
 
     def _calculate_recall(self, correctly_captured: int, missed_critical: int) -> float:
         """Calculate recall (0-1 scale)"""
@@ -334,8 +312,7 @@ class MedicalCorrectnessEvaluator(dspy.Module):
         try:
             # Step 1: Extract medical statements from note
             extraction_result = self.extract_statements(
-                generated_note=generated_note,
-                patient_metadata=patient_metadata)
+                generated_note=generated_note)
 
             # Step 2: Validate medical accuracy of statements
             validation_result = self.validate_accuracy(
@@ -345,9 +322,9 @@ class MedicalCorrectnessEvaluator(dspy.Module):
             )
 
             # Parse JSON results
-            medically_sound_data = self._safe_json_parse(
+            medically_sound_data = safe_json_parse(
                 validation_result.medically_sound)
-            medically_incorrect_data = self._safe_json_parse(
+            medically_incorrect_data = safe_json_parse(
                 validation_result.medically_incorrect)
 
             return {
@@ -361,9 +338,7 @@ class MedicalCorrectnessEvaluator(dspy.Module):
                 },
                 'medical_correctness_detail': {
                     'medically_sound_list': medically_sound_data.get('list', []),
-                    'medically_incorrect_list': medically_incorrect_data.get('list', []),
-                    'reasoning': validation_result.reasoning,
-                    'extraction_reasoning': extraction_result.reasoning
+                    'medically_incorrect_list': medically_incorrect_data.get('list', [])
                 }
             }
 
@@ -380,13 +355,6 @@ class MedicalCorrectnessEvaluator(dspy.Module):
     def evaluate(self, transcript: str, generated_note: str) -> Dict[str, Any]:
         """Interface method for BaseEvaluator compatibility"""
         return self(transcript=transcript, generated_note=generated_note)
-
-    def _safe_json_parse(self, json_str: str) -> Dict[str, Any]:
-        """Safely parse JSON string with fallback"""
-        try:
-            return json.loads(json_str)
-        except (json.JSONDecodeError, TypeError):
-            return {'list': [], 'count': 0}
 
     def _calculate_accuracy(self, medically_sound: int, medically_incorrect: int) -> float:
         """Calculate medical accuracy (0-1 scale)"""

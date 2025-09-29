@@ -163,27 +163,101 @@ class SimpleSOAPIntegration:
 
     async def process_normalized_data_async(self, normalized_data: List[Dict[str, Any]], source_name: str) -> List[Dict[str, Any]]:
         """Async version of process_normalized_data for parallel processing"""
-        tasks = []
 
-        for item in normalized_data:
+        async def process_with_progress(item, pbar):
             conversation = item.get('transcript', '')
             metadata = str(item.get('patient_metadata', {}))
 
-            if conversation:  # Only process if we have a conversation
-                task = self.process_single_async(
-                    conversation, metadata, source_name)
-                tasks.append(task)
+            result = None
+            if conversation:
+                result = await self.process_single_async(conversation, metadata, source_name)
 
-        # Process all items in parallel with simple progress bar
-        if tasks:
-            results = await tqdm.gather(
-                *tasks,
-                desc=f"Processing {len(tasks)} samples"
-            )
-            # Filter out any None results
-            return [r for r in results if r is not None]
+            pbar.update(1)
+            return result
 
-        return []
+        # Create progress bar
+        pbar = tqdm(total=len(normalized_data),
+                    desc=f"Processing {len(normalized_data)} samples")
+
+        # Process all items in parallel
+        tasks = [process_with_progress(item, pbar) for item in normalized_data]
+        results = await asyncio.gather(*tasks)
+
+        pbar.close()
+
+        # Filter out None results
+        return [r for r in results if r is not None]
+
+    def process_evaluation_only(self, normalized_data: List[Dict[str, Any]], source_name: str) -> List[Dict[str, Any]]:
+        """Sync wrapper for evaluate-only mode with progress bar"""
+        return asyncio.run(self.process_evaluation_only_async(normalized_data, source_name))
+
+    async def process_evaluation_only_async(self, normalized_data: List[Dict[str, Any]], source_name: str) -> List[Dict[str, Any]]:
+        """Async evaluation-only processing with progress bar"""
+
+        async def evaluate_with_progress(item, pbar):
+            conversation = item.get('transcript', '')
+            reference_note = item.get('reference_notes', '')
+            patient_metadata = item.get('patient_metadata', {})
+
+            result = None
+            if conversation and reference_note:
+                result = await self.evaluate_existing_note_async(
+                    conversation, reference_note, patient_metadata, source_name, item)
+
+            pbar.update(1)
+            return result
+
+        # Create progress bar
+        pbar = tqdm(total=len(normalized_data),
+                    desc=f"Evaluating {len(normalized_data)} samples")
+
+        # Process all items in parallel
+        tasks = [evaluate_with_progress(item, pbar)
+                 for item in normalized_data]
+        results = await asyncio.gather(*tasks)
+
+        pbar.close()
+
+        # Filter out None results
+        return [r for r in results if r is not None]
+
+    async def evaluate_existing_note_async(self, conversation: str, existing_soap_note: str,
+                                           patient_metadata: Dict[str, Any], source_name: str,
+                                           original_item: Dict[str, Any]) -> Dict[str, Any]:
+        """Async version of evaluate_existing_note"""
+        if self.evaluator is None:
+            return {"error": "No evaluator configured"}
+
+        metadata_str = str(patient_metadata)
+
+        if self.evaluation_mode == "deterministic":
+            eval_result = self.evaluator.evaluate_deterministic(
+                conversation, existing_soap_note, metadata_str)
+        elif self.evaluation_mode == "llm_only":
+            if hasattr(self.evaluator, 'evaluate_llm_only_async'):
+                eval_result = await self.evaluator.evaluate_llm_only_async(conversation, existing_soap_note, metadata_str)
+            else:
+                eval_result = self.evaluator.evaluate_llm_only(
+                    conversation, existing_soap_note, metadata_str)
+        else:  # comprehensive
+            if hasattr(self.evaluator, 'evaluate_comprehensive_async'):
+                eval_result = await self.evaluator.evaluate_comprehensive_async(conversation, existing_soap_note, metadata_str)
+            else:
+                eval_result = self.evaluator.evaluate_comprehensive(
+                    conversation, existing_soap_note, metadata_str)
+
+        result = {
+            'original_transcript': conversation,
+            'reference_notes': existing_soap_note,
+            'evaluation_metrics': eval_result,
+            'source_name': source_name,
+            'patient_metadata': patient_metadata
+        }
+
+        # Save to storage
+        self.storage.save_result(result)
+        return result
 
     def evaluate_existing_note(self, conversation: str, existing_soap_note: str) -> Dict[str, Any]:
         """Evaluate an existing SOAP note without regenerating"""

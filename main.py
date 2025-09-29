@@ -142,33 +142,14 @@ def main():
         results = []
 
         if mode == "generate":
-            for item in normalized_data:
-                conversation = item.get('transcript', '')
-                metadata = str(item.get('patient_metadata', {}))
-
-                if conversation:
-                    result = integration.process_single(
-                        conversation, metadata, source)
-                    results.append(result)
+            # Use async processing with progress bar for generation
+            results = integration.process_normalized_data(
+                normalized_data, source)
 
         elif mode == "evaluate":
-            for item in normalized_data:
-                conversation = item.get('transcript', '')
-                reference_note = item.get('reference_notes', '')
-
-                if conversation and reference_note:
-                    eval_result = integration.evaluate_existing_note(
-                        conversation, reference_note)
-                    result = {
-                        'original_transcript': conversation,
-                        'reference_notes': reference_note,
-                        'evaluation_metrics': eval_result,
-                        'source_name': source,
-                        'patient_metadata': item.get('patient_metadata', {})
-                    }
-                    # Save to storage
-                    integration.storage.save_result(result)
-                    results.append(result)
+            # Use async processing with progress bar for evaluation
+            results = integration.process_evaluation_only(
+                normalized_data, source)
 
         else:  # both
             results = integration.process_normalized_data(

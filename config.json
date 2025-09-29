@@ -5,10 +5,10 @@
     "temperature": 1
   },
   "defaults": {
-    "samples": 1,
-    "mode": "both",
-    "output": "/nlp/data/karthik9/Sprint1/Dental/deepscribe_soap_eval/results/gemini_results7.json",
-    "storage": "both",
+    "samples": 13,
+    "mode": "evaluate",
+    "output": "/nlp/data/karthik9/Sprint1/Dental/deepscribe_soap_eval/results/g16.json",
+    "storage": "evaluation_only",
     "soap_engine": "dspy",
     "evaluation_mode": "comprehensive"
   }
