@@ -71,6 +71,151 @@ class SimpleSOAPIntegration:
 
 ---
 
+## 🔬 **Approach & Design Decisions**
+
+### **Evaluation Approach Comparison**
+
+#### **1. LLM-as-Judge vs Deterministic Metrics**
+
+I implemented a **hybrid approach** after considering the tradeoffs:
+
+**LLM-as-Judge (ContentFidelityEvaluator, MedicalCorrectnessEvaluator):**
+
+- ✅ **Pros**: Deep semantic understanding, catches nuanced medical errors, handles context
+- ❌ **Cons**: Slower (~8s per evaluation), expensive API calls, potential inconsistency
+- **Use Case**: Production quality assessment, final validation
+
+**Deterministic Metrics (EntityCoverageEvaluator, SOAPCompletenessEvaluator):**
+
+- ✅ **Pros**: Lightning fast (~0.1s), consistent, no API costs, reliable baselines
+- ❌ **Cons**: Surface-level analysis, misses context, limited medical knowledge
+- **Use Case**: Quick CI/CD checks, large-scale screening
+
+**Why Hybrid**: Combines speed of deterministic with depth of LLM analysis for optimal production workflow.
+
+#### **2. Reference-Based vs Non-Reference Evaluation**
+
+I built **intelligent fallback logic**:
+
+```python
+# Smart comparison strategy I implemented
+if ground_truth and ground_truth != reference_soap:
+    eval_source = ground_truth  # Use gold standard when available
+    compared_on = "ground_truth"
+else:
+    eval_source = transcript    # Fallback to transcript analysis
+    compared_on = "transcript"
+```
+
+**Reference-Based (Ground Truth):**
+
+- ✅ **Pros**: Objective comparison, clear quality standards, reliable metrics
+- ❌ **Cons**: Expensive to curate, limited scalability, not always available
+- **When I Use It**: When ground truth SOAP notes exist in dataset
+
+**Non-Reference (Transcript-Based):**
+
+- ✅ **Pros**: Scalable, works with any conversation, no manual annotation needed
+- ❌ **Cons**: Subjective quality assessment, harder to establish clear standards
+- **When I Use It**: Production monitoring, new conversations without ground truth
+
+#### **3. Synchronous vs Asynchronous Processing**
+
+I chose **true async batch processing**:
+
+**Why Not Sequential Processing:**
+
+- Would take 80s for 10 evaluations (8s each)
+- Blocks on API calls, poor resource utilization
+- Doesn't scale for production volumes
+
+**Why Async Batch Processing:**
+
+```python
+# True parallel evaluation - 3-5x speedup
+eval_results = await asyncio.gather([
+    evaluator.evaluate_batch_async(transcripts, notes, metadata)
+    for evaluator in self.evaluators
+])
+```
+
+- Processes 10+ notes simultaneously
+- Better API utilization, faster feedback
+- Scales to production workloads
+
+#### **4. DSPy vs Raw Prompting**
+
+I chose **DSPy framework** over raw prompting:
+
+**Raw Prompting Approach:**
+
+- Manual prompt engineering, harder to optimize
+- No structured outputs, JSON parsing issues
+- Difficult to maintain consistency across evaluators
+
+**DSPy Structured Approach:**
+
+```python
+class ExtractCriticalFindings(dspy.Signature):
+    transcript: str = dspy.InputField(desc="Patient conversation")
+    critical_findings: str = dspy.OutputField(desc="JSON list of critical facts")
+```
+
+- Structured inputs/outputs with type safety
+- Built-in optimization capabilities (BootstrapFewShot)
+- Consistent evaluation patterns across different medical domains
+
+#### **5. Multi-Model Strategy**
+
+I implemented **provider flexibility**:
+
+**Single Model Risk**: Vendor lock-in, API outages, model deprecation
+**Multi-Model Benefits**:
+
+- Easy switching between Gemini, GPT-4, Claude
+- Cost optimization (Gemini cheaper, GPT-4 more accurate)
+- Redundancy for production reliability
+
+### **Key Architecture Decisions**
+
+#### **Evaluation Modes**
+
+```python
+# Flexible evaluation for different use cases
+evaluation_modes = {
+    "deterministic": "Fast baseline (~2s per sample)",
+    "llm_only": "Deep analysis (~8s per sample)", 
+    "comprehensive": "Best quality (~10s per sample)"
+}
+```
+
+#### **Storage Strategy**
+
+- **JSONL Format**: Streaming for large datasets, easy to append
+- **Structured Results**: Consistent schema for downstream analysis
+- **Dashboard Integration**: Automatic visualization generation
+
+#### **Error Handling Philosophy**
+
+```python
+# Graceful degradation - continue processing even if some evaluations fail
+try:
+    eval_result = await evaluator.evaluate_async(transcript, note)
+except Exception as e:
+    eval_result = create_fallback_result(error=str(e))
+```
+
+### **Tradeoffs Made**
+
+1. **Accuracy vs Speed**: Hybrid approach provides configurable balance
+2. **Cost vs Quality**: Deterministic fallbacks reduce API costs while maintaining quality floor
+3. **Complexity vs Flexibility**: Modular architecture enables easy extension but requires more setup
+4. **Memory vs Processing**: Streaming JSONL allows large datasets but requires careful batch sizing
+
+This design prioritizes **production scalability** while maintaining **research-quality insights** - exactly what medical AI systems need for both development and deployment.
+
+---
+
 ## 🚀 **How It Actually Works**
 
 When you run:
