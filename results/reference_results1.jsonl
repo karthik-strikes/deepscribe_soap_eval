@@ -1,0 +1,142 @@
+[
+  {
+    "source_name": "adesouza1/soap_notes",
+    "evaluation_metrics": {
+      "bleu_score": 0.0,
+      "rouge_scores": {
+        "rouge-1": 0.0,
+        "rouge-2": 0.0,
+        "rouge-l": 0.0
+      },
+      "semantic_similarity": 0.0,
+      "factual_consistency_score": 84.61538461538461,
+      "hallucination_score": 76.19047619047619,
+      "clinical_accuracy_score": 70.58823529411765,
+      "missing_critical_findings": 2,
+      "total_critical_findings": 13,
+      "missing_findings_percentage": 15.384615384615385,
+      "hallucinated_facts": 5,
+      "total_generated_facts": 21,
+      "hallucination_percentage": 23.809523809523807,
+      "clinical_errors": 5,
+      "total_clinical_statements": 17,
+      "clinical_accuracy_percentage": 70.58823529411765,
+      "overall_quality_score": 60.0,
+      "evaluation_confidence": 85.0
+    },
+    "timestamp": "2025-09-28T11:37:14.205592",
+    "input_hash": "6104360aca128b072317995dbaee35b1"
+  },
+  {
+    "source_name": "adesouza1/soap_notes",
+    "evaluation_metrics": {
+      "bleu_score": 0.0,
+      "rouge_scores": {
+        "rouge-1": 0.0,
+        "rouge-2": 0.0,
+        "rouge-l": 0.0
+      },
+      "semantic_similarity": 0.0,
+      "factual_consistency_score": 84.61538461538461,
+      "hallucination_score": 73.91304347826087,
+      "clinical_accuracy_score": 85.71428571428571,
+      "missing_critical_findings": 2,
+      "total_critical_findings": 13,
+      "missing_findings_percentage": 15.384615384615385,
+      "hallucinated_facts": 6,
+      "total_generated_facts": 23,
+      "hallucination_percentage": 26.08695652173913,
+      "clinical_errors": 2,
+      "total_clinical_statements": 14,
+      "clinical_accuracy_percentage": 85.71428571428571,
+      "overall_quality_score": 45.0,
+      "evaluation_confidence": 85.0
+    },
+    "timestamp": "2025-09-28T11:37:14.223992",
+    "input_hash": "72796bdbc95e6bc3a75ae7a3a2523ee5"
+  },
+  {
+    "source_name": "adesouza1/soap_notes",
+    "evaluation_metrics": {
+      "bleu_score": 0.0,
+      "rouge_scores": {
+        "rouge-1": 0.0,
+        "rouge-2": 0.0,
+        "rouge-l": 0.0
+      },
+      "semantic_similarity": 0.0,
+      "factual_consistency_score": 75.0,
+      "hallucination_score": 61.53846153846153,
+      "clinical_accuracy_score": 70.0,
+      "missing_critical_findings": 3,
+      "total_critical_findings": 12,
+      "missing_findings_percentage": 25.0,
+      "hallucinated_facts": 10,
+      "total_generated_facts": 26,
+      "hallucination_percentage": 38.46153846153847,
+      "clinical_errors": 6,
+      "total_clinical_statements": 20,
+      "clinical_accuracy_percentage": 70.0,
+      "overall_quality_score": 45.0,
+      "evaluation_confidence": 50.0
+    },
+    "timestamp": "2025-09-28T11:37:14.238001",
+    "input_hash": "d67a72c7d4e38373b476e40fc687e26c"
+  },
+  {
+    "source_name": "adesouza1/soap_notes",
+    "evaluation_metrics": {
+      "bleu_score": 0.0,
+      "rouge_scores": {
+        "rouge-1": 0.0,
+        "rouge-2": 0.0,
+        "rouge-l": 0.0
+      },
+      "semantic_similarity": 0.0,
+      "factual_consistency_score": 90.9090909090909,
+      "hallucination_score": 100.0,
+      "clinical_accuracy_score": 100.0,
+      "missing_critical_findings": 1,
+      "total_critical_findings": 11,
+      "missing_findings_percentage": 9.090909090909092,
+      "hallucinated_facts": 0,
+      "total_generated_facts": 18,
+      "hallucination_percentage": 0.0,
+      "clinical_errors": 0,
+      "total_clinical_statements": 15,
+      "clinical_accuracy_percentage": 100.0,
+      "overall_quality_score": 75.0,
+      "evaluation_confidence": 95.0
+    },
+    "timestamp": "2025-09-28T11:37:14.250633",
+    "input_hash": "e64cc0d19b71b401230fdad8f52b99da"
+  },
+  {
+    "source_name": "adesouza1/soap_notes",
+    "evaluation_metrics": {
+      "bleu_score": 0.0,
+      "rouge_scores": {
+        "rouge-1": 0.0,
+        "rouge-2": 0.0,
+        "rouge-l": 0.0
+      },
+      "semantic_similarity": 0.0,
+      "factual_consistency_score": 94.11764705882354,
+      "hallucination_score": 69.56521739130434,
+      "clinical_accuracy_score": 79.3103448275862,
+      "missing_critical_findings": 1,
+      "total_critical_findings": 17,
+      "missing_findings_percentage": 5.88235294117647,
+      "hallucinated_facts": 7,
+      "total_generated_facts": 23,
+      "hallucination_percentage": 30.434782608695656,
+      "clinical_errors": 6,
+      "total_clinical_statements": 29,
+      "clinical_accuracy_percentage": 79.3103448275862,
+      "overall_quality_score": 60.0,
+      "evaluation_confidence": 70.0
+    },
+    "timestamp": "2025-09-28T11:37:14.264726",
+    "input_hash": "5b9179fd1ee9b89d7b98b077421268a9"
+  }
+]
