@@ -345,6 +345,274 @@ python main.py --dashboard results/gpt4_results.jsonl results/gemini_results.jso
 
 ---
 
+## 🎛️ **Complete CLI Reference**
+
+### **Required Arguments**
+
+#### **`--source`** (Required)
+
+```bash
+# HuggingFace dataset
+python main.py --source "adesouza1/soap_notes"
+
+# Local CSV file (auto-detects columns: conversation, transcript, soap_note, etc.)
+python main.py --source "medical_data.csv"
+
+# Local JSON/JSONL file
+python main.py --source "conversations.json"
+```
+
+**What it does**: Specifies where to load conversation data from. System auto-detects format and extracts relevant fields.
+
+### **Core Processing Arguments**
+
+#### **`--samples`** (Integer)
+
+```bash
+# Process 5 conversations
+python main.py --source "adesouza1/soap_notes" --samples 5
+
+# Process 100 for production analysis
+python main.py --source data.csv --samples 100
+```
+
+**What it does**: Limits how many conversations to process. Useful for testing or resource management.
+**Default**: From config.json (usually 10)
+
+#### **`--mode`** (Choices: `generate`, `evaluate`, `both`)
+
+```bash
+# Generate SOAP notes only (no evaluation)
+python main.py --source data.csv --mode generate
+
+# Evaluate existing SOAP notes only
+python main.py --source notes.json --mode evaluate
+
+# Generate + evaluate (default)
+python main.py --source data.csv --mode both
+```
+
+**What it does**:
+
+- `generate`: Creates SOAP notes from conversations using DSPy
+- `evaluate`: Runs evaluation on existing SOAP notes
+- `both`: Full pipeline - generate then evaluate
+
+#### **`--evaluation-mode`** (Choices: `deterministic`, `llm_only`, `comprehensive`, `skip`)
+
+```bash
+# Fast baseline checks only (~2s per sample)
+python main.py --source data.csv --evaluation-mode deterministic
+
+# Deep LLM analysis only (~8s per sample)
+python main.py --source data.csv --evaluation-mode llm_only
+
+# Best quality - all evaluators (~10s per sample)
+python main.py --source data.csv --evaluation-mode comprehensive
+
+# Skip evaluation entirely (generation only)
+python main.py --source data.csv --evaluation-mode skip
+```
+
+**What it does**:
+
+- `deterministic`: EntityCoverageEvaluator, SOAPCompletenessEvaluator, FormatValidityEvaluator only
+- `llm_only`: ContentFidelityEvaluator, MedicalCorrectnessEvaluator only  
+- `comprehensive`: All 5 evaluators for complete analysis
+- `skip`: No evaluation (same as `--mode generate`)
+
+### **Model & Engine Configuration**
+
+#### **`--model`** (String)
+
+```bash
+# Use Google Gemini (fast, cost-effective)
+python main.py --source data.csv --model "gemini/gemini-2.5-pro"
+
+# Use OpenAI GPT (more accurate)
+python main.py --source data.csv --model "openai/gpt-4o-mini"
+
+# Use Anthropic Claude
+python main.py --source data.csv --model "anthropic/claude-3-5-sonnet-20241022"
+```
+
+**What it does**: Specifies which LLM to use for SOAP generation and evaluation. Requires corresponding API key.
+**Default**: From config.json (usually gemini/gemini-2.5-pro)
+
+#### **`--soap-engine`** (Choices: `dspy`)
+
+```bash
+# Use DSPy structured generation (recommended)
+python main.py --source data.csv --soap-engine dspy
+```
+
+**What it does**: DSPy engine uses structured generation with ChainOfThought modules for consistent, high-quality SOAP notes.
+**Default**: `dspy`
+
+### **Output & Storage**
+
+#### **`--output`** (File path)
+
+```bash
+# Custom output file
+python main.py --source data.csv --output "results/my_evaluation.jsonl"
+
+# Output to specific directory
+python main.py --source data.csv --output "/path/to/results.jsonl"
+```
+
+**What it does**: Specifies where to save evaluation results in JSONL format.
+**Default**: `results/soap_results.jsonl`
+
+#### **`--storage`** (Choices: `soap_only`, `evaluation_only`, `both`)
+
+```bash
+# Store only SOAP notes (no evaluation metrics)
+python main.py --source data.csv --storage soap_only
+
+# Store only evaluation results (no SOAP content)
+python main.py --source data.csv --storage evaluation_only
+
+# Store everything (default)
+python main.py --source data.csv --storage both
+```
+
+**What it does**: Controls what data gets saved to reduce file size or focus on specific outputs.
+
+### **Performance Tuning**
+
+#### **`--batch-size`** (Integer)
+
+```bash
+# Small batches for limited memory
+python main.py --source data.csv --batch-size 5
+
+# Large batches for faster processing
+python main.py --source data.csv --batch-size 20
+```
+
+**What it does**: Number of samples processed in parallel. Higher = faster but more memory usage.
+**Default**: 10 (good balance for most systems)
+
+### **Configuration Management**
+
+#### **`--config`** (File path)
+
+```bash
+# Use custom config file
+python main.py --source data.csv --config "my_config.json"
+
+# Use default config
+python main.py --source data.csv --config "config.json"
+```
+
+**What it does**: Specifies which configuration file to load model settings and defaults from.
+**Default**: `config.json`
+
+#### **`--create-config`** (Flag)
+
+```bash
+# Create a sample configuration file
+python main.py --create-config
+
+# Create config with custom name
+python main.py --create-config --config "production_config.json"
+```
+
+**What it does**: Generates a template configuration file with all available options and exits.
+
+### **Dashboard & Analytics**
+
+#### **`--auto-dashboard`** (Flag)
+
+```bash
+# Auto-generate dashboard after processing
+python main.py --source data.csv --samples 10 --auto-dashboard
+```
+
+**What it does**: Automatically creates interactive HTML dashboard from evaluation results when processing completes.
+
+#### **`--dashboard`** (File list)
+
+```bash
+# Create dashboard from specific files
+python main.py --dashboard results/file1.jsonl results/file2.jsonl
+
+# Create dashboard from all results in directory
+python main.py --dashboard
+
+# Create dashboard from current output
+python main.py --source data.csv --output results/test.jsonl --dashboard
+```
+
+**What it does**: Creates interactive dashboard from existing evaluation result files. Can specify files or auto-detect.
+
+#### **`--dashboard-title`** (String)
+
+```bash
+# Custom dashboard title
+python main.py --dashboard results/*.jsonl --dashboard-title "Model Comparison Analysis"
+```
+
+**What it does**: Sets custom title for generated dashboard.
+**Default**: "SOAP Evaluation Dashboard"
+
+#### **`--open-dashboard` / `--open`** (Flag)
+
+```bash
+# Create dashboard and open in browser
+python main.py --dashboard results/*.jsonl --open
+```
+
+**What it does**: Automatically opens the generated dashboard in your default web browser.
+
+### **Complete Example Commands**
+
+#### **Quick Development Test**
+
+```bash
+python main.py --source "adesouza1/soap_notes" --samples 5 --evaluation-mode deterministic --auto-dashboard --open
+```
+
+**Result**: Downloads dataset, processes 5 samples with fast evaluation, creates dashboard, opens in browser (~30 seconds)
+
+#### **Production Quality Analysis**
+
+```bash
+python main.py --source "production_notes.json" --mode evaluate --evaluation-mode comprehensive --samples 100 --batch-size 10 --output "results/prod_analysis.jsonl" --auto-dashboard
+```
+
+**Result**: Evaluates 100 existing notes with all evaluators, saves detailed results, generates dashboard (~15 minutes)
+
+#### **Model Comparison Workflow**
+
+```bash
+# Test Gemini
+python main.py --source data.csv --model "gemini/gemini-2.5-pro" --samples 20 --output "results/gemini_results.jsonl"
+
+# Test GPT-4
+python main.py --source data.csv --model "openai/gpt-4o-mini" --samples 20 --output "results/gpt4_results.jsonl"
+
+# Compare results
+python main.py --dashboard results/gemini_results.jsonl results/gpt4_results.jsonl --dashboard-title "Gemini vs GPT-4 Comparison" --open
+```
+
+**Result**: Side-by-side model performance comparison with interactive dashboard
+
+#### **Configuration Setup**
+
+```bash
+# Create initial config
+python main.py --create-config
+
+# Edit config.json with your preferences, then run
+python main.py --source "adesouza1/soap_notes" --samples 10
+```
+
+**Result**: Persistent configuration for consistent runs
+
+---
+
 ## ⚙️ **Configuration & Setup**
 
 ### **1. Install Dependencies**
