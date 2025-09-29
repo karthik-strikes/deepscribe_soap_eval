@@ -601,7 +601,7 @@ python main.py --dashboard results/gemini_results.jsonl results/gpt4_results.jso
 
 #### **Configuration Setup**
 
-```bash
+   ```bash
 # Create initial config
 python main.py --create-config
 
@@ -617,14 +617,14 @@ python main.py --source "adesouza1/soap_notes" --samples 10
 
 ### **1. Install Dependencies**
 
-```bash
+   ```bash
 pip install -r requirements.txt
 # Installs: dspy-ai, datasets, pandas, plotly, asyncio libraries
-```
+   ```
 
 ### **2. API Keys**
 
-```bash
+   ```bash
 # Set your model API key
 export GEMINI_API_KEY="your-actual-api-key"
 export OPENAI_API_KEY="your-openai-key"  
@@ -757,15 +757,58 @@ Every evaluation produces structured output:
 - **Resume Capability**: Continue from previous runs
 - **Error Handling**: Graceful degradation on API failures
 
-### **Real Performance Numbers**
+### **Sample Execution Output**
 
+See `results/` folder for actual execution logs. Here's what a typical run looks like:
+
+```bash
+$ python main.py --source "adesouza1/soap_notes" --samples 60 --batch-size 20 --mode both --evaluation-mode comprehensive
+
+======================================================================
+DeepScribe SOAP Evaluation System
+======================================================================
+Source:           adesouza1/soap_notes
+Samples:          60
+Mode:             both
+SOAP Engine:      dspy
+Evaluation Mode:  comprehensive
+Batch Size:       20
+Output:           results/generate_evaluate_comprehensive5.jsonl
+======================================================================
+
+Setting up DSPy model: gemini/gemini-2.5-pro
+Loading data from: adesouza1/soap_notes
+Loaded 60 samples
+Field mapping detected:
+   - Transcript field: patient_convo
+   - Reference notes field: soap_notes
+   - Ground truth field: soap_notes
+
+Starting generation + evaluation (batches of 20)...
+Total batches: 3
+
+Processing progress: 100%|██████████| 60/60 [05:20<00:00, 5.34s/sample]
+
+======================================================================
+Processing Complete
+======================================================================
+Processed samples:        60
+Total stored:             60
+Output file:              results/generate_evaluate_comprehensive5.jsonl
+Processing time:          322.4s (5.4m)
+Avg time per sample:      5.37s
+Success rate:             100.0% (60/60)
+======================================================================
 ```
-Evaluation Mode     | Speed per Note | Use Case
---------------------|----------------|------------------
-Deterministic Only  | ~0.5s         | Quick baseline checks
-LLM Only           | ~8s           | Deep quality analysis  
-Comprehensive      | ~10s          | Production evaluation
-```
+
+**What happened:**
+- Downloaded HuggingFace dataset `adesouza1/soap_notes`
+- Processed 60 conversations in 3 batches of 20
+- Generated SOAP notes using DSPy structured approach
+- Ran comprehensive evaluation (all 5 evaluators)
+- Saved detailed results to JSONL file
+- **Total time**: 5.4 minutes for 60 samples
+- **Performance**: 5.37 seconds per sample average
 
 ---
 
