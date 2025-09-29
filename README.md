@@ -759,7 +759,7 @@ Every evaluation produces structured output:
 
 ### **Sample Execution Output**
 
-See `results/` folder for actual execution logs. Here's what a typical run looks like:
+See `results/sample_output_execution.txt` for the complete terminal output. Here's what a typical run looks like:
 
 ```bash
 $ python main.py --source "adesouza1/soap_notes" --samples 60 --batch-size 20 --mode both --evaluation-mode comprehensive

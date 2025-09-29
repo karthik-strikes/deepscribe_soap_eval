@@ -1,0 +1,108 @@
+(topics) karthik9@nlpgpu-login:/nlp/data/karthik9/Sprint1/Dental/deepscribe_soap_
+(topics) karthik9@nlpgpu-login:/nlp/data/karthik9/Sprint1/Dental/deepscribe_soap_eval> python main.py --source "adesouza1/soap_notes" --samples 60 --batch-size 20  --mode both  --evaluation-mode comprehensive --output "results/generate_evaluate_comprehensive5.jsonl"
+Loaded config from config.json
+
+======================================================================
+DeepScribe SOAP Evaluation System
+======================================================================
+Source:           adesouza1/soap_notes
+Samples:          60
+Mode:             both
+SOAP Engine:      dspy
+Evaluation Mode:  comprehensive
+Batch Size:       20
+Output:           results/generate_evaluate_comprehensive5.jsonl
+Storage Mode:     both
+======================================================================
+
+Output directory ready: results
+
+Setting up DSPy model: gemini/gemini-2.5-pro
+INFO:utils.model_setup:Setting up DSPy model: gemini/gemini-2.5-pro
+INFO:utils.model_setup:  max_tokens: 10000, temperature: 1
+INFO:utils.model_setup:DSPy model configured successfully
+
+Initializing data loader...
+Loading data from: adesouza1/soap_notes
+Requesting 60 samples...
+INFO:data.loader:Loading data from adesouza1/soap_notes (max_samples=60)
+INFO:data.loader:Auto-detected source type: huggingface
+INFO:data.loader:Loading HuggingFace dataset: adesouza1/soap_notes
+INFO:data.loader:Loaded 60 records from HuggingFace
+INFO:data.loader:Loaded 60 raw records
+INFO:data.loader:Performing field detection
+INFO:data.loader:Field detection successful: transcript='patient_convo', reference='soap_notes', confidence=1.00
+INFO:data.loader:Successfully normalized 60/60 records
+Loaded 60 samples
+Field mapping detected:
+   - Transcript field: patient_convo
+   - Reference notes field: soap_notes
+   - Ground truth field: soap_notes
+   - Metadata fields: age, patient_name, doctor_data, gender, dob, phone
+   - Confidence: 1.00
+
+Initializing SOAP pipeline...
+INFO:core.soap_generator:Initialized SOAP pipeline with dspy engine
+INFO:evaluation.evaluator:Initialized evaluation pipeline with 3 deterministic and 2 LLM evaluators
+INFO:core.integration:Loaded 40 existing records into cache
+Pipeline ready
+
+Starting generation + evaluation (batches of 20)...
+Total batches: 3
+
+INFO:core.integration:Processing 60 samples in 3 batches of size 20
+Processing progress:   0%|                                                               | 0/60 [00:00<?, ?sample/s]INFO:core.soap_generator:Starting batch SOAP generation for 20 conversations
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 48.43it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 46.39it/s]
+Processed 20 / 20 examples: 100%|██████████████████████████████████████████████████| 20/20 [00:00<00:00, 116.63it/s]
+INFO:core.soap_generator:Completed batch SOAP generation: 20/20 succeeded
+INFO:evaluation.evaluator:Starting batch content fidelity evaluation for 20 notes
+INFO:evaluation.evaluator:Starting batch medical correctness evaluation for 20 notes
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 51.08it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 56.61it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 49.97it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 52.76it/s]
+INFO:evaluation.evaluator:Completed batch content fidelity evaluation: 20 results
+INFO:evaluation.evaluator:Completed batch medical correctness evaluation: 20 results
+Processing progress:  33%|██████████████████                                    | 20/60 [00:01<00:03, 12.50sample/s]INFO:core.soap_generator:Starting batch SOAP generation for 20 conversations
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 56.78it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 52.90it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 92.21it/s]
+INFO:core.soap_generator:Completed batch SOAP generation: 20/20 succeeded
+INFO:evaluation.evaluator:Starting batch content fidelity evaluation for 20 notes
+INFO:evaluation.evaluator:Starting batch medical correctness evaluation for 20 notes
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 51.27it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 50.61it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 46.20it/s]
+Processed 17 / 20 examples:  80%|████████████████████████████████████████▊          | 16/20 [00:00<00:00, 36.23it/s]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:00<00:00, 49.12it/s]
+INFO:evaluation.evaluator:Completed batch medical correctness evaluation: 20 results| 19/20 [00:00<00:00, 36.23it/s]
+Processing progress:  67%|████████████████████████████████████                  | 40/60 [00:03<00:01, 11.97sample/s]INFO:core.soap_generator:Starting batch SOAP generation for 20 conversations
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:45<00:00,  2.30s/it]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:57<00:00,  2.86s/it]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [01:14<00:00,  3.72s/it]
+INFO:core.soap_generator:Completed batch SOAP generation: 20/20 succeeded
+INFO:evaluation.evaluator:Starting batch content fidelity evaluation for 20 notes
+INFO:evaluation.evaluator:Starting batch medical correctness evaluation for 20 notes
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [00:30<00:00,  1.52s/it]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [01:09<00:00,  3.49s/it]
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [01:55<00:00,  5.79s/it]
+INFO:evaluation.evaluator:Completed batch content fidelity evaluation: 20 results
+Processed 20 / 20 examples: 100%|███████████████████████████████████████████████████| 20/20 [01:53<00:00,  5.66s/it]
+INFO:evaluation.evaluator:Completed batch medical correctness evaluation: 20 results
+Processing progress: 100%|██████████████████████████████████████████████████████| 60/60 [05:20<00:00,  5.34s/sample]
+INFO:core.integration:Successfully processed 60 out of 60 items
+
+======================================================================
+Processing Complete
+======================================================================
+Processed samples:        60
+Total stored:             60
+Output file:              results/generate_evaluate_comprehensive5.jsonl
+Processing time:          322.4s (5.4m)
+Avg time per sample:      5.37s
+Success rate:             100.0% (60/60)
+Evaluation metrics:       3
+======================================================================
+
+(topics) karthik9@nlpgpu-login:/nlp/data/karthik9/Sprint1/Dental/deepscribe_soap_eval> 
