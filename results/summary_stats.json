@@ -1,0 +1,33 @@
+{
+  "generated_at": "2025-09-29T14:42:40.656003",
+  "total_samples": 40,
+  "quality_metrics": {
+    "overall_quality": {
+      "mean": 90.88083015379031,
+      "median": 92.47058823529412,
+      "std": 6.21981963391024,
+      "min": 72.50000000000001,
+      "max": 100.0
+    },
+    "content_fidelity_f1": {
+      "mean": 82.21492751074946
+    },
+    "medical_accuracy": {
+      "mean": 94.91388328425867
+    }
+  },
+  "grade_distribution": {
+    "A": 22,
+    "B": 16,
+    "C": 2
+  },
+  "success_rate": 100.0,
+  "engines_used": [
+    "dspy"
+  ],
+  "issues": {
+    "missed_critical": 42,
+    "unsupported_content": 85,
+    "medically_incorrect": 57
+  }
+}

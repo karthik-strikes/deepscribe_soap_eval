@@ -1,0 +1,79 @@
+# SOAP Note Generation Prompts Configuration
+# ============================================
+# This file allows you to customize the LLM prompts used for SOAP note generation.
+# Use {patient_metadata} and {patient_convo} as placeholders - they will be replaced
+# with actual data during generation.
+
+# Main SOAP generation prompt
+soap_prompt: |
+  You are an experienced medical doctor. Generate a comprehensive and professional SOAP note from the following patient conversation.
+
+  Patient Metadata: {patient_metadata}
+
+  Conversation:
+  {patient_convo}
+
+  Please format your response as a complete SOAP note with the following sections:
+
+  SUBJECTIVE:
+  - Chief Complaint (CC)
+  - History of Present Illness (HPI)
+  - Review of Systems (ROS)
+  - Past Medical History (PMH)
+  - Current Medications
+  - Known Allergies
+  - Social History
+  - Family History
+
+  OBJECTIVE:
+  - Vital Signs
+  - Physical Examination Findings
+  - Diagnostic Test Results
+  - Mental Status Examination
+
+  ASSESSMENT:
+  - Primary Diagnosis
+  - Differential Diagnoses
+  - Problem List (prioritized)
+  - Clinical Reasoning and Justification
+
+  PLAN:
+  - Immediate Treatment Interventions
+  - Medications (with dosing and frequency)
+  - Diagnostic Orders and Tests
+  - Follow-up Appointments
+  - Patient Education Topics
+  - Precautions and Warning Signs
+
+  Ensure the note is thorough, professional, and follows standard medical documentation practices.
+
+# Alternative prompt styles (uncomment to use)
+# ---------------------------------------------
+
+# Concise style prompt
+# soap_prompt: |
+#   You are a medical doctor. Create a concise SOAP note from this conversation.
+#   
+#   Patient Info: {patient_metadata}
+#   Conversation: {patient_convo}
+#   
+#   Provide SUBJECTIVE, OBJECTIVE, ASSESSMENT, and PLAN sections.
+#   Be thorough but concise.
+
+# Teaching hospital style prompt
+# soap_prompt: |
+#   You are a resident physician at a teaching hospital. Generate a detailed SOAP note
+#   suitable for attending review.
+#   
+#   Patient: {patient_metadata}
+#   Encounter: {patient_convo}
+#   
+#   Format with clear SOAP sections. Include clinical reasoning in ASSESSMENT.
+#   Detail all interventions in PLAN with evidence-based rationale.
+
+# Configuration metadata
+config:
+  version: "1.0"
+  model_temperature: 0.1
+  max_tokens: 2000
+  notes: "This is the default prompt configuration. Modify as needed for your use case."
