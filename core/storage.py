@@ -23,7 +23,6 @@ class FlexibleSOAPStorage:
         self.processed_hashes = set()
         self.results_data = []
 
-        print(f"Storage mode: {self.mode.value}")
         self._ensure_directory_exists()
         self._load_existing_data()
 
@@ -48,7 +47,7 @@ class FlexibleSOAPStorage:
                     if 'input_hash' in result:
                         self.processed_hashes.add(result['input_hash'])
 
-                print(f"Loaded {len(self.results_data)} existing results")
+                # Loaded existing results silently
             except Exception as e:
                 print(f"Warning: Could not load existing data: {e}")
                 self.results_data = []
@@ -69,9 +68,9 @@ class FlexibleSOAPStorage:
         combined = f"{transcript}|{metadata}"
         return hashlib.md5(combined.encode()).hexdigest()
 
-    def is_already_processed(self, transcript: str, metadata: str) -> bool:
-        """Check if this input has already been processed"""
-        input_hash = self._create_input_hash(transcript, metadata)
+    def is_duplicate(self, transcript: str, metadata: str) -> bool:
+        """Check if this input is a duplicate before processing"""
+        input_hash = self._create_input_hash(transcript, str(metadata))
         return input_hash in self.processed_hashes
 
     def _filter_by_mode(self, result: Dict[str, Any]) -> Dict[str, Any]:
@@ -130,9 +129,7 @@ class FlexibleSOAPStorage:
             )
 
             if input_hash in self.processed_hashes:
-                print(
-                    f"Warning: Duplicate detected, not saving result with hash {input_hash[:8]}...")
-                return False
+                return False  # Duplicate detected, skip silently
 
             # Add metadata
             result['timestamp'] = datetime.now().isoformat()
@@ -155,7 +152,6 @@ class FlexibleSOAPStorage:
     def switch_mode(self, new_mode: str):
         """Switch storage mode"""
         self.mode = StorageMode(new_mode)
-        print(f"Storage mode switched to: {self.mode.value}")
 
     def load_all_results(self) -> List[Dict[str, Any]]:
         """Load all stored results"""

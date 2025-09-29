@@ -1,6 +1,7 @@
 """Simple SOAP note generation with dual engine support (DSPy and Direct LLM)."""
 
 import dspy
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from core.exceptions import SOAPGenerationError
@@ -13,168 +14,128 @@ class SOAPEngine(ABC):
     def generate_soap(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
         pass
 
+    async def generate_soap_async(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
+        """Async version of generate_soap - default implementation calls sync version"""
+        return self.generate_soap(patient_convo, patient_metadata)
+
 
 # ==================== DSPY ENGINE ====================
 
 class ExtractSubjectiveInfo(dspy.Signature):
+    """Extract patient's subjective information from conversation. Handle all PHI with HIPAA compliance."""
     patient_convo: str = dspy.InputField(
         desc="Patient-provider conversation transcript")
     patient_metadata: str = dspy.InputField(
         desc="Patient demographics and background")
-    chief_complaint: str = dspy.OutputField(
-        desc="Primary reason for the visit")
-    history_present_illness: str = dspy.OutputField(
-        desc="Detailed account of current illness")
-    review_of_systems: str = dspy.OutputField(desc="Review of body systems")
-    past_medical_history: str = dspy.OutputField(
-        desc="Past medical conditions")
-    medications: str = dspy.OutputField(desc="Current medications")
-    allergies: str = dspy.OutputField(desc="Known allergies")
-    social_history: str = dspy.OutputField(desc="Lifestyle factors")
-    family_history: str = dspy.OutputField(desc="Family medical history")
+    subjective_section: str = dspy.OutputField(
+        desc="Complete SUBJECTIVE section including chief complaint, HPI, ROS, PMH, medications, allergies, social and family history"
+    )
 
 
 class ExtractObjectiveInfo(dspy.Signature):
+    """Extract objective clinical findings from conversation. Handle all PHI with HIPAA compliance."""
     patient_convo: str = dspy.InputField(
         desc="Patient-provider conversation transcript")
     patient_metadata: str = dspy.InputField(
         desc="Patient demographics and background")
-    vital_signs: str = dspy.OutputField(desc="Vital signs")
-    physical_examination: str = dspy.OutputField(desc="Physical exam findings")
-    diagnostic_tests: str = dspy.OutputField(desc="Lab and imaging results")
-    mental_status: str = dspy.OutputField(desc="Mental status exam")
+    objective_section: str = dspy.OutputField(
+        desc="Complete OBJECTIVE section including vital signs, physical exam, diagnostic tests, and mental status"
+    )
 
 
-class GenerateAssessment(dspy.Signature):
-    subjective_findings: str = dspy.InputField(desc="Subjective information")
-    objective_findings: str = dspy.InputField(desc="Objective findings")
+class GenerateAssessmentAndPlan(dspy.Signature):
+    """Generate clinical assessment and treatment plan. Handle all PHI with HIPAA compliance."""
+    subjective_section: str = dspy.InputField(desc="Subjective findings")
+    objective_section: str = dspy.InputField(desc="Objective findings")
     patient_metadata: str = dspy.InputField(desc="Patient demographics")
-    primary_diagnosis: str = dspy.OutputField(desc="Primary diagnosis")
-    differential_diagnoses: str = dspy.OutputField(
-        desc="Alternative diagnoses")
-    problem_list: str = dspy.OutputField(desc="Active problems")
-    clinical_reasoning: str = dspy.OutputField(desc="Clinical reasoning")
-
-
-class DevelopPlan(dspy.Signature):
-    assessment: str = dspy.InputField(desc="Clinical assessment")
-    subjective_findings: str = dspy.InputField(desc="Patient information")
-    objective_findings: str = dspy.InputField(desc="Clinical findings")
-    immediate_treatment: str = dspy.OutputField(desc="Immediate treatments")
-    medications_prescribed: str = dspy.OutputField(desc="Medications")
-    diagnostic_orders: str = dspy.OutputField(desc="Additional tests")
-    follow_up_instructions: str = dspy.OutputField(desc="Follow-up plan")
-    patient_education: str = dspy.OutputField(desc="Patient education")
-    precautions: str = dspy.OutputField(desc="Warning signs")
-
-
-class CompileSOAPNote(dspy.Signature):
-    subjective_section: str = dspy.InputField(desc="Subjective section")
-    objective_section: str = dspy.InputField(desc="Objective section")
-    assessment_section: str = dspy.InputField(desc="Assessment section")
-    plan_section: str = dspy.InputField(desc="Plan section")
-    patient_metadata: str = dspy.InputField(desc="Patient demographics")
-    complete_soap_note: str = dspy.OutputField(desc="Final SOAP note")
+    assessment_section: str = dspy.OutputField(
+        desc="Complete ASSESSMENT section with primary diagnosis, differential diagnoses, and clinical reasoning"
+    )
+    plan_section: str = dspy.OutputField(
+        desc="Complete PLAN section with treatments, medications, orders, follow-up, education, and precautions"
+    )
 
 
 class DSPySOAPEngine(SOAPEngine):
     def __init__(self):
-        self.extract_subjective = dspy.Predict(ExtractSubjectiveInfo)
-        self.extract_objective = dspy.Predict(ExtractObjectiveInfo)
-        self.generate_assessment = dspy.Predict(GenerateAssessment)
-        self.develop_plan = dspy.Predict(DevelopPlan)
-        self.compile_soap = dspy.Predict(CompileSOAPNote)
+        self.extract_subjective = dspy.ChainOfThought(ExtractSubjectiveInfo)
+        self.extract_objective = dspy.ChainOfThought(ExtractObjectiveInfo)
+        self.generate_assessment_plan = dspy.ChainOfThought(
+            GenerateAssessmentAndPlan)
         self.engine_type = "dspy"
         self.version = "1.0"
 
-    def _prediction_to_dict(self, prediction):
-        """Convert DSPy Prediction object to JSON-serializable dictionary"""
-        if hasattr(prediction, '__dict__'):
-            # Convert prediction object to dict, excluding private attributes
-            result = {}
-            for key, value in prediction.__dict__.items():
-                if not key.startswith('_'):
-                    result[key] = value
-            return result
-        return prediction
-
     def generate_soap(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
         try:
-            # Extract subjective
+            # Step 1: Extract subjective information
             subjective_result = self.extract_subjective(
-                patient_convo=patient_convo, patient_metadata=patient_metadata
-            )
-            subjective_section = f"""SUBJECTIVE:
-Chief Complaint: {subjective_result.chief_complaint}
-History of Present Illness: {subjective_result.history_present_illness}
-Review of Systems: {subjective_result.review_of_systems}
-Past Medical History: {subjective_result.past_medical_history}
-Medications: {subjective_result.medications}
-Allergies: {subjective_result.allergies}
-Social History: {subjective_result.social_history}
-Family History: {subjective_result.family_history}"""
-
-            # Extract objective
-            objective_result = self.extract_objective(
-                patient_convo=patient_convo, patient_metadata=patient_metadata
-            )
-            objective_section = f"""OBJECTIVE:
-Vital Signs: {objective_result.vital_signs}
-Physical Examination: {objective_result.physical_examination}
-Diagnostic Tests: {objective_result.diagnostic_tests}
-Mental Status: {objective_result.mental_status}"""
-
-            # Generate assessment
-            assessment_result = self.generate_assessment(
-                subjective_findings=subjective_section,
-                objective_findings=objective_section,
+                patient_convo=patient_convo,
                 patient_metadata=patient_metadata
             )
-            assessment_section = f"""ASSESSMENT:
-Primary Diagnosis: {assessment_result.primary_diagnosis}
-Differential Diagnoses: {assessment_result.differential_diagnoses}
-Problem List: {assessment_result.problem_list}
-Clinical Reasoning: {assessment_result.clinical_reasoning}"""
 
-            # Develop plan
-            plan_result = self.develop_plan(
-                assessment=assessment_section,
-                subjective_findings=subjective_section,
-                objective_findings=objective_section
+            # Step 2: Extract objective information
+            objective_result = self.extract_objective(
+                patient_convo=patient_convo,
+                patient_metadata=patient_metadata
             )
-            plan_section = f"""PLAN:
-Immediate Treatment: {plan_result.immediate_treatment}
-Medications: {plan_result.medications_prescribed}
-Diagnostic Orders: {plan_result.diagnostic_orders}
-Follow-up: {plan_result.follow_up_instructions}
-Patient Education: {plan_result.patient_education}
-Precautions: {plan_result.precautions}"""
 
-            # Compile final note
-            final_soap = self.compile_soap(
-                subjective_section=subjective_section,
-                objective_section=objective_section,
-                assessment_section=assessment_section,
-                plan_section=plan_section,
+            # Step 3: Generate assessment and plan based on findings
+            assessment_plan_result = self.generate_assessment_plan(
+                subjective_section=subjective_result.subjective_section,
+                objective_section=objective_result.objective_section,
                 patient_metadata=patient_metadata
             )
 
             return {
-                'complete_soap_note': final_soap.complete_soap_note,
-                'subjective_components': self._prediction_to_dict(subjective_result),
-                'objective_components': self._prediction_to_dict(objective_result),
-                'assessment_components': self._prediction_to_dict(assessment_result),
-                'plan_components': self._prediction_to_dict(plan_result),
+                'subjective': subjective_result.subjective_section,
+                'objective': objective_result.objective_section,
+                'assessment': assessment_plan_result.assessment_section,
+                'plan': assessment_plan_result.plan_section,
                 'engine_type': self.engine_type,
-                'engine_info': {
-                    'engine_type': self.engine_type,
-                    'version': self.version,
-                    'framework': 'DSPy'
-                }
+                'version': self.version
             }
-
         except Exception as e:
-            raise SOAPGenerationError(f"DSPy SOAP generation failed: {e}")
+            raise SOAPGenerationError(f"SOAP generation failed: {e}")
+
+    async def generate_soap_async(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
+        """Async version with parallel DSPy operations for better performance"""
+        try:
+            # Run all DSPy operations in parallel for better performance
+            subjective_task = asyncio.create_task(
+                asyncio.to_thread(self.extract_subjective,
+                                  patient_convo=patient_convo,
+                                  patient_metadata=patient_metadata)
+            )
+
+            objective_task = asyncio.create_task(
+                asyncio.to_thread(self.extract_objective,
+                                  patient_convo=patient_convo,
+                                  patient_metadata=patient_metadata)
+            )
+
+            # Wait for both extraction tasks to complete
+            subjective_result, objective_result = await asyncio.gather(
+                subjective_task, objective_task
+            )
+
+            # Generate assessment and plan based on findings (this depends on the previous results)
+            assessment_plan_result = await asyncio.to_thread(
+                self.generate_assessment_plan,
+                subjective_section=subjective_result.subjective_section,
+                objective_section=objective_result.objective_section,
+                patient_metadata=patient_metadata
+            )
+
+            return {
+                'subjective': subjective_result.subjective_section,
+                'objective': objective_result.objective_section,
+                'assessment': assessment_plan_result.assessment_section,
+                'plan': assessment_plan_result.plan_section,
+                'engine_type': self.engine_type,
+                'version': self.version
+            }
+        except Exception as e:
+            raise SOAPGenerationError(f"Async SOAP generation failed: {e}")
 
 
 # ==================== LLM ENGINE ====================
@@ -220,7 +181,6 @@ Provide a well-structured, professional medical note."""
             soap_note = self._call_llm(prompt)
 
             return {
-                'complete_soap_note': soap_note,
                 'subjective_components': None,  # LLM generates complete note
                 'objective_components': None,
                 'assessment_components': None,
@@ -237,6 +197,44 @@ Provide a well-structured, professional medical note."""
         except Exception as e:
             raise SOAPGenerationError(f"LLM SOAP generation failed: {e}")
 
+    async def generate_soap_async(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
+        """Async version of LLM SOAP generation"""
+        try:
+            prompt = f"""You are a medical doctor. Generate a complete SOAP note from this patient conversation.
+
+Patient Metadata: {patient_metadata}
+
+Conversation:
+{patient_convo}
+
+Format your response as a complete SOAP note with these sections:
+- SUBJECTIVE (Chief Complaint, HPI, ROS, PMH, Medications, Allergies, Social History, Family History)
+- OBJECTIVE (Vital Signs, Physical Exam, Diagnostic Tests, Mental Status)
+- ASSESSMENT (Primary Diagnosis, Differential Diagnoses, Problem List, Clinical Reasoning)
+- PLAN (Immediate Treatment, Medications, Diagnostic Orders, Follow-up, Patient Education, Precautions)
+
+Provide a well-structured, professional medical note."""
+
+            # Run LLM call in thread to avoid blocking
+            soap_note = await asyncio.to_thread(self._call_llm, prompt)
+
+            return {
+                'subjective_components': None,  # LLM generates complete note
+                'objective_components': None,
+                'assessment_components': None,
+                'plan_components': None,
+                'engine_type': self.engine_type,
+                'engine_info': {
+                    'engine_type': self.engine_type,
+                    'version': self.version,
+                    'framework': 'Direct LLM',
+                    'model': self.model_name
+                }
+            }
+
+        except Exception as e:
+            raise SOAPGenerationError(f"Async LLM SOAP generation failed: {e}")
+
 
 # ==================== MAIN PIPELINE ====================
 
@@ -252,7 +250,12 @@ class SOAPGenerationPipeline:
         self.engine_type = engine_type
 
     def forward(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
-        result = self.engine.generate_soap(patient_convo, patient_metadata)
+        """Sync wrapper - calls async version for optimal performance"""
+        return asyncio.run(self.forward_async(patient_convo, patient_metadata))
+
+    async def forward_async(self, patient_convo: str, patient_metadata: str) -> Dict[str, Any]:
+        """Async version of forward for better performance"""
+        result = await self.engine.generate_soap_async(patient_convo, patient_metadata)
         # Add pipeline-level metadata
         result['pipeline_info'] = {
             'pipeline_version': '2.0',

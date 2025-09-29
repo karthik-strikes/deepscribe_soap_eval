@@ -160,14 +160,11 @@ class UniversalDataLoader:
             cache_key = self._create_cache_key(sample_data)
             if cache_key in self._cached_mappings:
                 field_mapping = self._cached_mappings[cache_key]
-                print(f"Using cached field mapping for {source}")
             else:
-                print(f"Analyzing fields for {source} using DSPy...")
                 try:
                     field_mapping = self.field_detector.detect_fields(
                         sample_data)
                 except FieldDetectionError:
-                    print("DSPy detection failed, using fallback...")
                     field_mapping = self.field_detector._fallback_detection(
                         sample_data)
 
@@ -183,8 +180,6 @@ class UniversalDataLoader:
                 raise DataLoadingError(
                     f"No valid data after normalization from {source}")
 
-            print(
-                f"Successfully normalized {len(normalized_data)} samples from {source}")
             return normalized_data, field_mapping
 
         except Exception as e:

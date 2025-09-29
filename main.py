@@ -115,9 +115,7 @@ def main():
     if os.path.dirname(output):
         os.makedirs(os.path.dirname(output), exist_ok=True)
 
-    print(f"Source: {source}, Model: {model_name}, Samples: {samples}")
-    print(
-        f"Mode: {mode}, SOAP Engine: {soap_engine}, Evaluation: {evaluation_mode}, Storage: {storage_mode}")
+    # Configuration loaded silently
 
     # Setup model
     if not setup_dspy_model(model_name, model_config.get("max_tokens", 4000), model_config.get("temperature", 0.1)):
@@ -131,9 +129,6 @@ def main():
         # Load and normalize data
         normalized_data, field_mapping = loader.load_and_normalize(
             source=source, max_samples=samples)
-        print(f"Loaded {len(normalized_data)} samples")
-        print(
-            f"Field mapping confidence: {field_mapping.confidence_score:.2f}")
 
         # Initialize integration pipeline
         integration = SimpleSOAPIntegration(
@@ -147,7 +142,6 @@ def main():
         results = []
 
         if mode == "generate":
-            print("Generating SOAP notes only...")
             for item in normalized_data:
                 conversation = item.get('transcript', '')
                 metadata = str(item.get('patient_metadata', {}))
@@ -158,7 +152,6 @@ def main():
                     results.append(result)
 
         elif mode == "evaluate":
-            print("Evaluating reference notes only...")
             for item in normalized_data:
                 conversation = item.get('transcript', '')
                 reference_note = item.get('reference_notes', '')
@@ -178,7 +171,6 @@ def main():
                     results.append(result)
 
         else:  # both
-            print("Generating and evaluating SOAP notes...")
             results = integration.process_normalized_data(
                 normalized_data, source)
 

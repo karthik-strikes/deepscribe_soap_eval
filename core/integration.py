@@ -6,7 +6,9 @@ Connects SOAP generator, evaluator, and storage without overcomplicating.
 Works with your existing loader.py and main.py structure.
 """
 
+import asyncio
 from typing import Dict, Any, Optional, List
+from tqdm.asyncio import tqdm
 from core.soap_generator import SOAPGenerationPipeline
 from evaluation.evaluator import EvaluationPipeline
 from core.storage import FlexibleSOAPStorage
@@ -51,8 +53,34 @@ class SimpleSOAPIntegration:
 
         self.evaluation_mode = evaluation_mode
 
+    def _build_soap_note_from_sections(self, soap_result: Dict[str, Any]) -> str:
+        """Build a complete SOAP note from individual sections for evaluation"""
+        sections = []
+
+        if 'subjective' in soap_result and soap_result['subjective']:
+            sections.append(f"SUBJECTIVE:\n{soap_result['subjective']}")
+
+        if 'objective' in soap_result and soap_result['objective']:
+            sections.append(f"OBJECTIVE:\n{soap_result['objective']}")
+
+        if 'assessment' in soap_result and soap_result['assessment']:
+            sections.append(f"ASSESSMENT:\n{soap_result['assessment']}")
+
+        if 'plan' in soap_result and soap_result['plan']:
+            sections.append(f"PLAN:\n{soap_result['plan']}")
+
+        # If no sections available, return a basic note
+        if not sections:
+            return "Generated SOAP note (sections not available)"
+
+        return "\n\n".join(sections)
+
     def process_single(self, conversation: str, metadata: str, source_name: str = "unknown") -> Dict[str, Any]:
         """Process one conversation through the pipeline"""
+
+        # Check for duplicates BEFORE expensive processing
+        if self.storage.is_duplicate(conversation, metadata):
+            return None  # Skip processing duplicates
 
         # Generate SOAP note
         soap_result = self.soap_pipeline.forward(conversation, metadata)
@@ -64,15 +92,18 @@ class SimpleSOAPIntegration:
 
         # Run evaluation if enabled
         if self.evaluator is not None:
+            # Build generated note from SOAP sections for evaluation
+            generated_note = self._build_soap_note_from_sections(soap_result)
+
             if self.evaluation_mode == "deterministic":
                 eval_result = self.evaluator.evaluate_deterministic(
-                    conversation, soap_result['complete_soap_note'])
+                    conversation, generated_note, metadata)
             elif self.evaluation_mode == "llm_only":
                 eval_result = self.evaluator.evaluate_llm_only(
-                    conversation, soap_result['complete_soap_note'])
+                    conversation, generated_note, metadata)
             else:  # comprehensive
                 eval_result = self.evaluator.evaluate_comprehensive(
-                    conversation, soap_result['complete_soap_note'])
+                    conversation, generated_note, metadata)
 
             soap_result['evaluation_metrics'] = eval_result
 
@@ -82,19 +113,77 @@ class SimpleSOAPIntegration:
         return soap_result
 
     def process_normalized_data(self, normalized_data: List[Dict[str, Any]], source_name: str) -> List[Dict[str, Any]]:
-        """Process data that's already been normalized by your loader"""
-        results = []
+        """Sync wrapper - calls async version for optimal performance"""
+        return asyncio.run(self.process_normalized_data_async(normalized_data, source_name))
+
+    async def process_single_async(self, conversation: str, metadata: str, source_name: str = "unknown") -> Dict[str, Any]:
+        """Async version of process_single for better performance"""
+
+        # Check for duplicates BEFORE expensive processing
+        if self.storage.is_duplicate(conversation, metadata):
+            return None  # Skip processing duplicates
+
+        # Generate SOAP note using async for better performance
+        soap_result = await self.soap_pipeline.forward_async(conversation, metadata)
+
+        # Add required fields for storage
+        soap_result['original_transcript'] = conversation
+        soap_result['patient_metadata'] = metadata
+        soap_result['source_name'] = source_name
+
+        # Run evaluation if enabled (async for better performance)
+        if self.evaluator is not None:
+            # Build generated note from SOAP sections for evaluation
+            generated_note = self._build_soap_note_from_sections(soap_result)
+
+            if self.evaluation_mode == "deterministic":
+                eval_result = self.evaluator.evaluate_deterministic(
+                    conversation, generated_note, metadata)
+            elif self.evaluation_mode == "llm_only":
+                if hasattr(self.evaluator, 'evaluate_llm_only_async'):
+                    eval_result = await self.evaluator.evaluate_llm_only_async(
+                        conversation, generated_note, metadata)
+                else:
+                    eval_result = self.evaluator.evaluate_llm_only(
+                        conversation, generated_note, metadata)
+            else:  # comprehensive
+                if hasattr(self.evaluator, 'evaluate_comprehensive_async'):
+                    eval_result = await self.evaluator.evaluate_comprehensive_async(
+                        conversation, generated_note, metadata)
+                else:
+                    eval_result = self.evaluator.evaluate_comprehensive(
+                        conversation, generated_note, metadata)
+
+            soap_result['evaluation_metrics'] = eval_result
+
+        # Save to storage
+        self.storage.save_result(soap_result)
+
+        return soap_result
+
+    async def process_normalized_data_async(self, normalized_data: List[Dict[str, Any]], source_name: str) -> List[Dict[str, Any]]:
+        """Async version of process_normalized_data for parallel processing"""
+        tasks = []
 
         for item in normalized_data:
             conversation = item.get('transcript', '')
             metadata = str(item.get('patient_metadata', {}))
 
             if conversation:  # Only process if we have a conversation
-                result = self.process_single(
+                task = self.process_single_async(
                     conversation, metadata, source_name)
-                results.append(result)
+                tasks.append(task)
 
-        return results
+        # Process all items in parallel with simple progress bar
+        if tasks:
+            results = await tqdm.gather(
+                *tasks,
+                desc=f"Processing {len(tasks)} samples"
+            )
+            # Filter out any None results
+            return [r for r in results if r is not None]
+
+        return []
 
     def evaluate_existing_note(self, conversation: str, existing_soap_note: str) -> Dict[str, Any]:
         """Evaluate an existing SOAP note without regenerating"""
